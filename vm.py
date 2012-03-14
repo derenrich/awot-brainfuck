@@ -8,8 +8,16 @@ BUF_SIZE = 2048
 
 
 class Compiler:
+    def optimize_loop(self, loop, builder):
+        if loop == [["-"]]:
+            pv = builder.load(self.point)
+            p = builder.gep(self.buf,[self.zero, pv])
+            builder.store(self.zero, p)        
+            return True
+
+        return False
     def compile(self,prog):
-        ast = AWOT().parse(prog)
+        ast = AWOT().parse(prog).asList()
         self.module = Module.new('awot_module')
 
         self.one = Constant.int( Type.int(), 1) 
@@ -42,7 +50,11 @@ class Compiler:
         builder.ret(v)
     def build_func(self, ast, builder):
         for c in ast:
-            if len(c) > 1:
+            num = Constant.int( Type.int(), len(c)) 
+            if c[0] == '[':
+                c = list(c)[1:-1]
+                if self.optimize_loop(c,builder):
+                    continue
                 new_func = self.module.add_function(Type.function(Type.void(), []), "func_"+str(self.block_count))
                 self.block_count += 1        
                 main_block = new_func.append_basic_block("entry")
@@ -57,10 +69,9 @@ class Compiler:
                 v = func_builder.load(p)
                 b = func_builder.icmp(IPRED_UGT, v, self.zero)
                 func_builder.cbranch(b, body_block, ret_block) 
-
                 func_builder.position_at_end(body_block)
 
-                self.build_func(c[1:-1], func_builder)
+                self.build_func(c, func_builder)
 
                 func_builder.branch(end_block)
                 func_builder.position_at_end(end_block)
@@ -73,44 +84,38 @@ class Compiler:
                 func_builder.position_at_end(ret_block)
                 func_builder.ret_void()
                 new_func.verify()
-            elif c == ">":
+            elif c[0] == ">":
                 v = builder.load(self.point)
-                res = builder.add(v, self.one)
+                res = builder.add(v, num)
                 builder.store(res, self.point)
-            elif c == "<":
+            elif c[0] == "<":
                 v = builder.load(self.point)
-                res = builder.sub(v, self.one)
+                res = builder.sub(v, num)
                 builder.store(res, self.point)
-            elif c == "+":
+            elif c[0] == "+":
                 pv = builder.load(self.point)
                 p = builder.gep(self.buf,[self.zero, pv])
                 v = builder.load(p)
-                res = builder.add(v, self.one)
+                res = builder.add(v, num)
                 builder.store(res, p)
-            elif c == "-":
+            elif c[0] == "-":
                 pv = builder.load(self.point)
                 p = builder.gep(self.buf,[self.zero, pv])
                 v = builder.load(p)
-                res = builder.sub(v, self.one)
+                res = builder.sub(v, num)
                 builder.store(res, p)
-            elif c == '.':
+            elif c[0] == '.':
                 pv = builder.load(self.point)
                 p = builder.gep(self.buf,[self.zero, pv])
                 v = builder.load(p)
                 builder.call(self.printchar, (v,))
-
-
-
-#hw=">++[<+++++++++++++>-]<[[>+>+<<-]>[<+>-]++++++++[>++++++++<-]>.[-]<<>++++++++++[>++++++++++[>++++++++++[>++++++++++[>++++++++++[>++++++++++[>++++++++++[-]<-]<-]<-]<-]<-]<-]<-]++++++++++."
-
-
 
 if __name__ == "__main__":
     import sys
     prog = sys.stdin.read()
     c = Compiler()
     c.compile(prog)
-    print c.module
+    #print c.module
     ee = ExecutionEngine.new(c.module)
-    #retval = ee.run_function(c.main, [])
-    #print "returned", retval.as_int()
+    retval = ee.run_function(c.main, [])
+    print "returned", retval.as_int()
