@@ -15,7 +15,7 @@ class AWOT:
     Add = Group(OneOrMore(IncB))
     Sub = Group(OneOrMore(DecB))
     Loop = Forward()
-    Expr = ShiftL|ShiftR|Add|Sub|OutB|ReadB|Loop
+    Expr = ShiftL|ShiftR|Add|Sub|Group(OutB)|ReadB|Loop
     Loop << Group(Start + ZeroOrMore(Expr) + End)
     Program = ZeroOrMore(Expr)
     def parse(self,prog):

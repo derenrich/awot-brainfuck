@@ -1,6 +1,3 @@
-An optimizing bf compiler using LLVM in python
- % time cat mandelbrat.bf | python vm.py
-<OUTPUT CLIPPED BECAUSE GITHUB TEXT WRAPS>
-returned 0
-python vm.py > README  5.12s user 0.01s system 99% cpu 5.142 total
+An optimizing bf compiler using LLVM in python. The program will segfault if the bf program moves outside of the allocated buffer.
+
 
